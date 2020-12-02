@@ -1,6 +1,7 @@
 """CPU functionality."""
 
 import sys
+#Program Actions
 
 class CPU:
     """Main CPU class."""
