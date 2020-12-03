@@ -15,8 +15,11 @@ class CPU:
     def __init__(self):
         """Construct a new CPU."""
         self.ram = [0] * 256 # 256 bytes of memory
-        self.reg = [0] * 8 # General Purpose Registers 0 - 7
+        self.reg = [0] * 7 # General Purpose Registers R0 - R6
+        self.reg.append('0xF4') # R7 set to '0xF4'
         self.pc = 0 # Program Counter
+        self.fl = 0
+        self.ie = 0
 
     # access the RAM inside the CPU object
     # MAR (Memory Address Register) - contains the address that is 
@@ -40,6 +43,7 @@ class CPU:
         # For now, we've just hardcoded a program:
 
         program = [
+            130,0,8,71,0,1 #print8.ls8 in decimal 
             # From print8.ls8
             # 0b10000010, # LDI R0,8
             # 0b00000000,
@@ -48,18 +52,18 @@ class CPU:
             # 0b00000000,
             # 0b00000001, # HLT
             #from mult.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b10000010, # LDI R1,9
-            0b00000001,
-            0b00001001,
-            0b10100010, # MUL R0,R1
-            0b00000000,
-            0b00000001,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
+            # 0b10000010, # LDI R0,8
+            # 0b00000000,
+            # 0b00001000,
+            # 0b10000010, # LDI R1,9
+            # 0b00000001,
+            # 0b00001001,
+            # 0b10100010, # MUL R0,R1
+            # 0b00000000,
+            # 0b00000001,
+            # 0b01000111, # PRN R0
+            # 0b00000000,
+            # 0b00000001, # HLT
 
         ]
 
@@ -85,8 +89,8 @@ class CPU:
 
         print(f"TRACE: %02X | %02X %02X %02X |" % (
             self.pc,
-            #self.fl,
-            #self.ie,
+            self.fl,
+            self.ie,
             self.ram_read(self.pc),
             self.ram_read(self.pc + 1),
             self.ram_read(self.pc + 2)
@@ -137,7 +141,6 @@ class CPU:
                 # Get product
                 product_of_register = self.reg[register_a] * self.reg[register_b]
                 # Assign value to Reg Key
-                print(self.reg[register_a], self.reg[register_b])
                 self.reg[register_a] = product_of_register
                 # Update PC
                 self.pc += 3
