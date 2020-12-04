@@ -4,48 +4,48 @@ import sys
 
 # Program Actions using hex for easy ref in trace
 ##ALU ops
-ADD = 0xA0 # 160 ADD
-SUB = 0xA1 # 161 Subtract
-MUL = 0xA2 # 162 MULTIPLY
-DIV = 0xA3 # Divide the value in the first register by the value in the second, storing the result in registerA.
-MOD = 0xA4 # Divide the value in the first register by the value in the second, storing the _remainder_ of the result in registerA.
-INC = 0x65 # Increment (add 1 to) the value in the given register.
-DEC = 0x66 # 102 Decrement (subtract 1 from) the value in the given register.
+ADD = 0xA0 #10100000 160 ADD
+SUB = 0xA1 #10100001 161 Subtract
+MUL = 0xA2 #10100010 162 MULTIPLY
+DIV = 0xA3 #10100011 Divide the value in the first register by the value in the second, storing the result in registerA.
+MOD = 0xA4 #10100100 Divide the value in the first register by the value in the second, storing the _remainder_ of the result in registerA.
+INC = 0x65 #01100101 Increment (add 1 to) the value in the given register.
+DEC = 0x66 #01100110 102 Decrement (subtract 1 from) the value in the given register.
 
-CMP = 0xA7 # 167 Compare the values in two registers.
-AND = 0xA8 # 168 AND
-NOT = 0x69 # Perform a bitwise-NOT on the value in a register, storing the result in the register.
-OR = 0xAA # Perform a bitwise-OR between the values in registerA and registerB, storing the result in registerA.
-XOR = 0xAB #Perform a bitwise-XOR between the values in registerA and registerB, storing the result in registerA.
-SHL = 0xAC #Shift the value in registerA left by the number of bits specified in registerB,filling the low bits with 0.
-SHR = 0xAD #Shift the value in registerA right by the number of bits specified in registerB, filling the high bits with 0.
+CMP = 0xA7 #10100111 167 Compare the values in two registers.
+AND = 0xA8 #10101000 168 AND
+NOT = 0x69 #01101001 Perform a bitwise-NOT on the value in a register, storing the result in the register.
+OR = 0xAA #10101010 Perform a bitwise-OR between the values in registerA and registerB, storing the result in registerA.
+XOR = 0xAB #10101011 Perform a bitwise-XOR between the values in registerA and registerB, storing the result in registerA.
+SHL = 0xAC #10101100 Shift the value in registerA left by the number of bits specified in registerB,filling the low bits with 0.
+SHR = 0xAD #10101101 Shift the value in registerA right by the number of bits specified in registerB, filling the high bits with 0.
 
 
 ## PC mutators
-CALL = 0x50 # 80 CALL
-RET = 0x11 #Return from subroutine.
-INT = 0x52 # Issue the interrupt number stored in the given register.
-IRET = 0x13 # Return from an interrupt handler.
-JMP = 0x54 #Jump to the address stored in the given register.
-JEQ = 0x55 #If `equal` flag is set (true), jump to the address stored in the given register.
-JLE = 0x59 #If `less-than` flag or `equal` flag is set (true), jump to the address stored in the given register.
-JGT = 0x57 #If `greater-than` flag is set (true), jump to the address stored in the given register.
-JLT = 0x58 #If `less-than` flag is set (true), jump to the address stored in the given register.
-JGE = 0x5A #If `greater-than` flag or `equal` flag is set (true), jump to the address stored in the given register.
-JNE = 0x56 #If `E` flag is clear (false, 0), jump to the address stored in the given register.
+RET = 0x11 #00010001 Return from subroutine.
+IRET = 0x13 #00010011 Return from an interrupt handler.
+CALL = 0x50 #01010000 80 CALL
+INT = 0x52 #01010010 Issue the interrupt number stored in the given register.
+JMP = 0x54 #01010100 Jump to the address stored in the given register.
+JEQ = 0x55 #01010101 If `equal` flag is set (true), jump to the address stored in the given register.
+JNE = 0x56 #01010110 If `E` flag is clear (false, 0), jump to the address stored in the given register.
+JGT = 0x57 #01010111 If `greater-than` flag is set (true), jump to the address stored in the given register.
+JLT = 0x58 #01011000 If `less-than` flag is set (true), jump to the address stored in the given register.
+JLE = 0x59 #01011001 If `less-than` flag or `equal` flag is set (true), jump to the address stored in the given register.
+JGE = 0x5A #01011010 If `greater-than` flag or `equal` flag is set (true), jump to the address stored in the given register.
 ## Other
-NOP = 0x00 # do nothing
-HLT = 0x01 # 1 HALT
-LDI = 0x82 # 130 LOAD IMMEDIATE
+NOP = 0x00 #00000000 do nothing
+HLT = 0x01 #00000001 1 HALT
+LDI = 0x82 #10000010 130 LOAD IMMEDIATE
 
-LD = 0x83 #Loads registerA with the value at the memory address stored in registerB.
-ST =0x84 #Store value in registerB in the address stored in registerA.
+LD = 0x83 #10000011 Loads registerA with the value at the memory address stored in registerB.
+ST =0x84 #10000100 Store value in registerB in the address stored in registerA.
 
-PUSH = 0x45 #Push the value in the given register on the stack.
-POP = 0x46 #Pop the value at the top of the stack into the given register.
+PUSH = 0x45 #01000101 Push the value in the given register on the stack.
+POP = 0x46 #01000110 Pop the value at the top of the stack into the given register.
 
-PRN = 0x47 # 71 PRINT
-PRA = 0x48 # Print alpha character value stored in the given register.
+PRN = 0x47 #01000111 71 PRINT
+PRA = 0x48 #01001000 Print alpha character value stored in the given register.
 
 
 class CPU:
