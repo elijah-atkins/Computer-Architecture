@@ -63,6 +63,9 @@ class CPU:
         self.branchtable[MOD] = self.mod
         self.branchtable[INC] = self.inc
         self.branchtable[DEC] = self.dec
+        self.branchtable[NOT] = self.handle_not
+        self.branchtable[OR] = self.handle_or
+        self.branchtable[AND] = self.handle_and
         self.ram = [0] * 256 # 256 bytes of memory
         self.register = [0] * 8 # General Purpose Registers R0 - R6
         self.register[7] = 0xF4 # R7 set to '0xF4' == '0b11110100' == '244'
@@ -120,15 +123,21 @@ class CPU:
         elif op == "SUB":
             self.register[reg_a] -= self.register[reg_b]
         elif op == "MUL": 
-             self.register[reg_a] *= self.register[reg_b]
+            self.register[reg_a] *= self.register[reg_b]
         elif op == "DIV": 
-             self.register[reg_a] /= self.register[reg_b]
+            self.register[reg_a] /= self.register[reg_b]
         elif op == "MOD": 
-             self.register[reg_a] %= self.register[reg_b]
+            self.register[reg_a] %= self.register[reg_b]
         elif op == "INC": 
-             self.register[reg_a] += 1
+            self.register[reg_a] += 1
         elif op == "DEC": 
-             self.register[reg_a] -= 1
+            self.register[reg_a] -= 1
+        elif op == "NOT":
+            self.register[reg_a] = ~self.register[reg_a]
+        elif op == "OR":
+            self.register[reg_a] |= self.register[reg_b]
+        elif op == "AND":
+            self.register[reg_a] &= self.register[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -204,6 +213,15 @@ class CPU:
 
     def dec(self):
         self.alu_helper("DEC")
+    
+    def handle_not(self):
+        self.alu_helper("NOT")
+
+    def handle_or(self):
+        self.alu_helper("OR")
+
+    def handle_and(self):
+        self.alu_helper("AND")
     
     #get number of times to increment pc from instruction binary
     def advance_pc(self):
