@@ -20,7 +20,6 @@ XOR = 0xAB #10101011 Perform a bitwise-XOR between the values in registerA and r
 SHL = 0xAC #10101100 Shift the value in registerA left by the number of bits specified in registerB,filling the low bits with 0.
 SHR = 0xAD #10101101 Shift the value in registerA right by the number of bits specified in registerB, filling the high bits with 0.
 
-
 ## PC mutators
 RET = 0x11 #00010001 Return from subroutine.
 IRET = 0x13 #00010011 Return from an interrupt handler.
@@ -53,11 +52,20 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
+        self.branchtable = {}
+        self.branchtable[LDI] = self.ldi
+        self.branchtable[PRN] = self.prn
+        self.branchtable[HLT] = self.hlt
+        self.branchtable[ADD] = self.add
+        self.branchtable[SUB] = self.sub
+        self.branchtable[MUL] = self.mul
+        self.branchtable[DIV] = self.div
         self.ram = [0] * 256 # 256 bytes of memory
-        self.reg = [0] * 7 # General Purpose Registers R0 - R6
-        self.reg.append(244) # R7 set to '0xF4'
+        self.register = [0] * 8 # General Purpose Registers R0 - R6
+        self.register[7] = 0xF4 # R7 set to '0xF4' == '0b11110100' == '244'
         self.pc = 0 # Program Counter
         self.fl = 0
+        self.running = True
     # TODO implament branchtable https://en.wikipedia.org/wiki/Branch_table
     # access the RAM inside the CPU object
     # MAR (Memory Address Register) - contains the address that is 
@@ -105,8 +113,13 @@ class CPU:
         """ALU operations."""
 
         if op == "ADD":
-            self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+            self.register[reg_a] += self.register[reg_b]
+        elif op == "SUB":
+            self.register[reg_a] -= self.register[reg_b]
+        elif op == "MUL": 
+             self.register[reg_a] *= self.register[reg_b]
+        elif op == "DIV": 
+             self.register[reg_a] /= self.register[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -134,50 +147,111 @@ class CPU:
         ), end='')
 
         for i in range(8):
-            print(" %02X" % self.reg[i], end='')
+            print(" %02X" % self.register[i], end='')
 
         print()
+    # Branch Table Commands
+    def ldi(self):
+        # gets the address for registry
+        operand_a = self.ram[self.pc + 1]
+        # gets the value for the registry
+        operand_b = self.ram[self.pc + 2]
+        # Assign value to Reg Key
+        self.register[operand_a] = operand_b
+        # Update PC
+        self.pc += 3
+
+    def prn(self):
+        # get the address we want to print
+        operand_a = self.ram[self.pc + 1]
+        # Print Reg
+        print(self.register[operand_a])
+        # Update PC
+        self.pc += 2
+
+    def hlt(self):
+        # Exit Loop
+        self.running = False
+        # Update PC
+        self.pc += 1
+
+    def mul(self):
+        operand_a = self.ram_read(self.pc + 1)
+        operand_b = self.ram_read(self.pc + 2) 
+        self.alu("MUL", operand_a, operand_b)   
+        self.pc += 3 
+
+    def div(self):
+        operand_a = self.ram_read(self.pc + 1)
+        operand_b = self.ram_read(self.pc + 2) 
+        self.alu("DIV", operand_a, operand_b)   
+        self.pc += 3 
+
+    def sub(self):
+        operand_a = self.ram_read(self.pc + 1)
+        operand_b = self.ram_read(self.pc + 2) 
+        self.alu("SUB", operand_a, operand_b)   
+        self.pc += 3 
+
+    def add(self):
+        operand_a = self.ram_read(self.pc + 1)
+        operand_b = self.ram_read(self.pc + 2) 
+        self.alu("ADD", operand_a, operand_b)   
+        self.pc += 3 
 
     def run(self):
         """Run the CPU."""
 
-        running = True
 
-        while running:
-            # read the memory address (MAR) that's stored in register PC
-            # store the result in Instruction Register (IR)
-            IR = self.ram_read(self.pc)
+        while self.running:
+            # read the memory address (MAR) that's stored in register PC (self.pc)
+            # store the result in IR (Instruction Register)
+            IR = self.pc
+            instruction_to_execute = self.ram[IR]
 
-            # ram_read() - read bytes at PC + 1 and PC + 2 from RAM into variables 
-            # operand_a and operand_b
-            operand_a = self.ram_read(self.pc + 1)
-            operand_b = self.ram_read(self.pc + 2)
+            try:
+                self.branchtable[instruction_to_execute]()
+            
+            except KeyError:
+                print(f"KeyError at {self.register[self.ram[instruction_to_execute]]}")
+                sys.exit(1)
+        # running = True
 
-            # HALT
-            if IR == HLT:
-                # Exit Loop
-                running = False
-                # Update PC
-                self.pc += 1
+        # while running:
+        #     # read the memory address (MAR) that's stored in register PC
+        #     # store the result in Instruction Register (IR)
+        #     IR = self.ram_read(self.pc)
 
-            # PRINT
-            elif IR == PRN:
-                # Print Reg
-                print(self.reg[operand_a])
-                # Update PC
-                self.pc += 2
+        #     # ram_read() - read bytes at PC + 1 and PC + 2 from RAM into variables 
+        #     # operand_a and operand_b
+        #     operand_a = self.ram_read(self.pc + 1)
+        #     operand_b = self.ram_read(self.pc + 2)
 
-            # LDI = LOAD IMMEDIATE
-            elif IR == LDI:
-                # Assign value to Reg Key
-                self.reg[operand_a] = operand_b
-                # Update PC
-                self.pc += 3
-            #MUL = Multiply
-            elif IR == MUL:
-                # Get product
-                product_of_operand = self.reg[operand_a] * self.reg[operand_b]
-                # Assign value to Reg Key
-                self.reg[operand_a] = product_of_operand
-                # Update PC
-                self.pc += 3
+        #     # HALT
+        #     if IR == HLT:
+        #         # Exit Loop
+        #         running = False
+        #         # Update PC
+        #         self.pc += 1
+
+        #     # PRINT
+        #     elif IR == PRN:
+        #         # Print Reg
+        #         print(self.register[operand_a])
+        #         # Update PC
+        #         self.pc += 2
+
+        #     # LDI = LOAD IMMEDIATE
+        #   elif IR == LDI:
+        #         # Assign value to Reg Key
+        #         self.register[operand_a] = operand_b
+        #         # Update PC
+        #         self.pc += 3
+        #     #MUL = Multiply
+        #     elif IR == MUL:
+        #         # Get product
+        #         product_of_operand = self.register[operand_a] * self.register[operand_b]
+        #         # Assign value to Reg Key
+        #         self.register[operand_a] = product_of_operand
+        #         # Update PC
+        #         self.pc += 3
