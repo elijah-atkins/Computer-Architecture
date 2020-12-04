@@ -55,6 +55,7 @@ class CPU:
         self.branchtable = {}
         self.branchtable[LDI] = self.ldi
         self.branchtable[PRN] = self.prn
+        self.branchtable[PRA] = self.pra
         self.branchtable[HLT] = self.hlt
         self.branchtable[ADD] = self.add
         self.branchtable[SUB] = self.sub
@@ -63,8 +64,12 @@ class CPU:
         self.branchtable[MOD] = self.mod
         self.branchtable[INC] = self.inc
         self.branchtable[DEC] = self.dec
+        self.branchtable[SHL] = self.shl
+        self.branchtable[SHR] = self.shr
+        self.branchtable[CMP] = self.cmp 
         self.branchtable[NOT] = self.handle_not
         self.branchtable[OR] = self.handle_or
+        self.branchtable[XOR] = self.handle_xor
         self.branchtable[AND] = self.handle_and
         self.ram = [0] * 256 # 256 bytes of memory
         self.register = [0] * 8 # General Purpose Registers R0 - R6
@@ -136,8 +141,21 @@ class CPU:
             self.register[reg_a] = ~self.register[reg_a]
         elif op == "OR":
             self.register[reg_a] |= self.register[reg_b]
+        elif op == "XOR":
+            self.register[reg_a] ^= self.register[reg_b]
         elif op == "AND":
             self.register[reg_a] &= self.register[reg_b]
+        elif op == "SHL":
+            self.register[reg_a] <<= self.register[reg_b]
+        elif op == "SHR":
+            self.register[reg_a] >>= self.register[reg_b]
+        elif op == "CMP": #`FL` bits: `00000LGE`
+            if self.register[reg_a] == self.register[reg_b]:
+                self.fl = 1 #001
+            elif self.register[reg_a] > self.register[reg_b]:
+                self.fl = 2 #010
+            elif self.register[reg_a] < self.register[reg_b]:
+                self.fl = 4 #100
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -187,6 +205,14 @@ class CPU:
         # Update PC
         self.advance_pc()
 
+    def pra(self):
+        # get the address we want to print
+        operand_a = self.ram[self.pc + 1]
+        # Print Reg
+        print(self.register[operand_a])
+        # Update PC
+        self.advance_pc()
+
     def hlt(self):
         # Exit Loop
         self.running = False
@@ -220,8 +246,20 @@ class CPU:
     def handle_or(self):
         self.alu_helper("OR")
 
+    def handle_xor(self):
+        self.alu_helper("XOR")
+
     def handle_and(self):
         self.alu_helper("AND")
+    
+    def shl(self):
+        self.alu_helper("SHL")
+
+    def shr(self):
+        self.alu_helper("SHR")
+    
+    def cmp(self):
+        self.alu_helper("CMP")
     
     #get number of times to increment pc from instruction binary
     def advance_pc(self):
