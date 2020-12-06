@@ -53,54 +53,58 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
-        self.branchtable = {}
+        self.branchtable = {
         #ALU ops
-        self.branchtable[ADD] = self.add
-        self.branchtable[SUB] = self.sub
-        self.branchtable[MUL] = self.mul
-        self.branchtable[DIV] = self.div
-        self.branchtable[MOD] = self.mod
-        self.branchtable[INC] = self.inc
-        self.branchtable[DEC] = self.dec
-        self.branchtable[CMP] = self.handle_cmp 
-        self.branchtable[AND] = self.handle_and
-        self.branchtable[NOT] = self.handle_not
-        self.branchtable[OR] = self.handle_or
-        self.branchtable[XOR] = self.handle_xor
-        self.branchtable[SHL] = self.shl
-        self.branchtable[SHR] = self.shr
+        ADD: self.add,
+        SUB: self.sub,
+        MUL: self.mul,
+        DIV: self.div,
+        MOD: self.mod,
+        INC: self.inc,
+        DEC: self.dec,
+        CMP: self.handle_cmp, 
+        AND: self.handle_and,
+        NOT: self.handle_not,
+        OR: self.handle_or,
+        XOR: self.handle_xor,
+        SHL: self.shl,
+        SHR: self.shr,
         #PC mutators
-        self.branchtable[CALL] = self.call
-        self.branchtable[RET] = self.ret 
+        CALL: self.call,
+        RET: self.ret ,
+        
+        INT: self.handle_int,
+        IRET: self.iret,         
 
-
-        self.branchtable[JMP] = self.jmp
-        self.branchtable[JEQ] = self.jeq
-        self.branchtable[JNE] = self.jne
-        self.branchtable[JGT] = self.jgt
-        self.branchtable[JLT] = self.jlt
-        self.branchtable[JGE] = self.jge
-        self.branchtable[JLE] = self.jle
+        JMP: self.jmp,
+        JEQ: self.jeq,
+        JNE: self.jne,
+        JGT: self.jgt,
+        JLT: self.jlt,
+        JGE: self.jge,
+        JLE: self.jle,
 
         #Other
 
-        self.branchtable[HLT] = self.hlt
-        self.branchtable[LDI] = self.ldi
+        HLT: self.hlt,
+        LDI: self.ldi,
 
-        self.branchtable[LD] = self.ld
-        self.branchtable[ST] = self.st
+        LD: self.ld,
+        ST: self.st,
 
-        self.branchtable[PUSH] = self.push
-        self.branchtable[POP] = self.pop 
-        self.branchtable[PRN] = self.prn
-        self.branchtable[PRA] = self.pra
+        PUSH: self.push,
+        POP: self.pop,
+        PRN: self.prn,
+        PRA: self.pra,
+        }
         self.ram = [0] * 256 # 256 bytes of memory
         self.register = [0] * 8 # General Purpose Registers R0 - R6
         self.register[7] = 0xF4 # R7 set to '0xF4' == '0b11110100' == '244'
         self.pc = 0 # Program Counter
         self.fl = 0 #`FL` bits: `00000LGE`
         self.sp = 7 #stack pointer to R7
-        self.running = True
+        self.running = False
+        self._can_interrupt = True
     # TODO implament branchtable https://en.wikipedia.org/wiki/Branch_table
     # access the RAM inside the CPU object
     # MAR (Memory Address Register) - contains the address that is 
@@ -226,12 +230,9 @@ class CPU:
         self.advance_pc()
 
     def pra(self):
-        # get the address we want to print
-        register_a = self.ram_read(self.pc + 1)
-        # Print character
-
-        print(chr(self.register[register_a]))
-        # Update PC
+        given_register = self.ram_read(self.pc + 1)
+        letter = self.register[given_register]
+        print(chr(letter), end='')
         self.advance_pc()
 
     def hlt(self):
@@ -279,6 +280,12 @@ class CPU:
         # increment the stack pointer
         self.register[self.sp] += 1
         self.advance_pc()
+
+    def handle_int(self):
+        pass
+
+    def iret(self):
+        pass
 
     def call(self):
         return_address = self.pc + 2
@@ -383,6 +390,7 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
+        self.running = True
         while self.running:
             # read the memory address (MAR) that's stored in register PC (self.pc)
             # store the result in IR (Instruction Register)
