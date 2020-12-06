@@ -53,6 +53,7 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
+    # branchtable https://en.wikipedia.org/wiki/Branch_table
         self.branchtable = {
         #ALU ops
         ADD: self.add,
@@ -104,19 +105,19 @@ class CPU:
         self.fl = 0 #`FL` bits: `00000LGE`
         self.sp = 7 #stack pointer to R7
         self.running = False
-        self._can_interrupt = True
-    # TODO implament branchtable https://en.wikipedia.org/wiki/Branch_table
+
+
     # access the RAM inside the CPU object
     # MAR (Memory Address Register) - contains the address that is 
         # being read / written to
-    def ram_read(self, MAR):
+    def ram_read(self, MAR, shift):
         # accepts the address to read and return the value stored there
-        return self.ram[MAR]
+        return self.ram[MAR + shift]
     
     # access the RAM inside the CPU object
     # MDR (Memory Data Register) - contains the data that was read or 
         # the data to write
-    def ram_write(self, MDR, MAR):
+    def ram_write(self, MAR, MDR):
         # accepts a vale to write and the address to write it to
         self.ram[MAR] = MDR
 
@@ -133,15 +134,15 @@ class CPU:
                 for line in ls8:
                     split_line = line.split('#') #remove pounds from code
                     code_value = split_line[0].strip() #recover binary
-                    if code_value == '': #handle empty lines
+                    if code_value == '': #ignore empty lines
                         continue
-                    try:
+                    try: #get value of binary line
                         code_value = int(code_value, 2)
-                    except ValueError:
+                    except ValueError: #return fault if item isn't binary digit
                         print(f"Invalid Number: {code_value}")
                         sys.exit(1)
 
-                    self.ram_write(code_value, address)
+                    self.ram_write(address, code_value)
                     address += 1
 
         except FileNotFoundError:
@@ -158,11 +159,11 @@ class CPU:
         elif op == "MUL": 
             self.register[reg_a] *= self.register[reg_b]
         elif op == "DIV": 
-            self.register[reg_a] /= self.register[reg_b]
+#result is float not int in div when using '/'
+            self.register[reg_a] //= self.register[reg_b]
         elif op == "MOD": 
             self.register[reg_a] %= self.register[reg_b]
         elif op == "INC": 
-
             self.register[reg_a] += 1
         elif op == "DEC": 
             self.register[reg_a] -= 1
@@ -178,13 +179,14 @@ class CPU:
             self.register[reg_a] <<= self.register[reg_b]
         elif op == "SHR":
             self.register[reg_a] >>= self.register[reg_b]
+
         elif op == "CMP": #`FL` bits: `00000LGE`
             if self.register[reg_a] == self.register[reg_b]:
-                self.fl = 1 #001
+                self.fl = 1 #0b00000001 L and G set to 0 E set to 1 same as decimal 1 or hex 0x01
             elif self.register[reg_a] > self.register[reg_b]:
-                self.fl = 2 #010
+                self.fl = 2 #0b00000010 L and E set to 0 G set to 1 same as decimal 2 or hex 0x02
             elif self.register[reg_a] < self.register[reg_b]:
-                self.fl = 4 #100
+                self.fl = 4 #0b00000100 G and E set to 0 L set to 1 same as decimal 4 or hex 0x04
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -194,15 +196,15 @@ class CPU:
         from run() if you need help debugging.
         """
 
-        print(f"TRACE: %02X %02X  | %02X %02X %02X %02X %02X |" % (
+        print(f"TRACE: %02X %08X  | %02X %02X %02X %02X %02X |" % (
             self.pc,
-            self.fl,
-            #self.ie, <--what's this
-            self.ram_read(self.pc),
-            self.ram_read(self.pc + 1),
-            self.ram_read(self.pc + 2),
-            self.ram_read(self.pc + 3),
-            self.ram_read(self.pc + 4),
+            self.fl,#returning flag in binary
+            #self.ie, <--what's this?
+            self.ram_read(self.pc, 0),
+            self.ram_read(self.pc, 1),
+            self.ram_read(self.pc, 2),
+            self.ram_read(self.pc, 3),
+            self.ram_read(self.pc, 4),
 
         ), end='')
 
@@ -213,26 +215,30 @@ class CPU:
     # Branch Table Commands
     def ldi(self):
         # gets the address for registry
-        operand_a = self.ram_read(self.pc + 1)
+        register_a = self.ram_read(self.pc, 1)
         # gets the value for the registry
-        operand_b = self.ram_read(self.pc + 2)
+        register_b = self.ram_read(self.pc, 2)
         # Assign value to Reg Key
-        self.register[operand_a] = operand_b
+        self.register[register_a] = register_b
         # Update PC
         self.advance_pc()
 
     def prn(self):
         # get the address we want to print
-        operand_a = self.ram[self.pc + 1]
-        # Print Reg
-        print(self.register[operand_a])
+        given_register = self.ram_read(self.pc, 1)
+        # Print Reg at address we want to print
+        print(self.register[given_register])
         # Update PC
         self.advance_pc()
 
     def pra(self):
-        given_register = self.ram_read(self.pc + 1)
+        #get the address of what we want to print
+        given_register = self.ram_read(self.pc, 1)
+        #get the object we want to print
         letter = self.register[given_register]
+        #print the letter without a new line
         print(chr(letter), end='')
+        #Update PC
         self.advance_pc()
 
     def hlt(self):
@@ -244,38 +250,38 @@ class CPU:
 
     def ld(self):
         # get the address we want to print
-        register_a = self.ram_read(self.pc + 1)
-        register_b = self.ram_read(self.pc + 2)
+        register_a = self.ram_read(self.pc, 1)
+        register_b = self.ram_read(self.pc, 2)
         # Print character
 
-        self.register[register_a] = self.ram[self.register[register_b]]
+        self.register[register_a] = self.ram_read(self.register[register_b],0)
         # Update PC
         self.advance_pc()
 
 
     def st(self):
         # get the address we want to print
-        register_a = self.ram_read(self.pc + 1)
-        register_b = self.ram_read(self.pc + 2)
+        register_a = self.ram_read(self.pc, 1)
+        register_b = self.ram_read(self.pc, 2)
         # Print character
-        self.register[register_b] = self.ram[self.register[register_a]]
+        self.register[register_b] = self.ram_read(self.register[register_a], 0)
 
         # Update PC
         self.advance_pc()
 
     def push(self):
-        given_register = self.ram[self.pc + 1]
+        given_register = self.ram_read(self.pc, 1)
         value_in_register = self.register[given_register]
         # Decrement the stack pointer
         self.register[self.sp] -= 1
         # Write the value of the given register to memory at SP location
-        self.ram[self.register[self.sp]] = value_in_register
+        self.ram_write(self.register[self.sp], value_in_register)
         self.advance_pc()
 
     def pop(self):
-        given_register = self.ram[self.pc + 1]
+        given_register = self.ram_read(self.pc, 1)
         # write the value in memory at the top of stack to the given register
-        value_from_memory = self.ram[self.register[self.sp]]
+        value_from_memory = self.ram_read(self.register[self.sp],0)
         self.register[given_register] = value_from_memory
         # increment the stack pointer
         self.register[self.sp] += 1
@@ -290,31 +296,31 @@ class CPU:
     def call(self):
         return_address = self.pc + 2
         self.register[6] -= 1
-        self.ram[self.register[6]] = return_address
-        self.pc = self.register[self.ram_read(self.pc + 1)]
+        self.ram_write(self.register[6], return_address)
+        self.pc = self.register[self.ram_read(self.pc, 1)]
 
     def jmp(self):
-        self.pc = self.register[self.ram_read(self.pc + 1)]
+        self.pc = self.register[self.ram_read(self.pc, 1)]
 
     def jeq(self):
-        if self.fl == 1: #001
-            self.pc = self.register[self.ram_read(self.pc + 1)]
+        if self.fl == 1: #001 Equal flag is true
+            self.pc = self.register[self.ram_read(self.pc, 1)]
         else:
             self.advance_pc()
 
     def jne(self):
         if self.fl != 1:
-            self.pc = self.register[self.ram_read(self.pc + 1)]
+            self.pc = self.register[self.ram_read(self.pc, 1)]
         else:
             self.advance_pc()
     def jgt(self):
         if self.fl == 2:
-            self.pc = self.register[self.ram_read(self.pc + 1)]
+            self.pc = self.register[self.ram_read(self.pc, 1)]
         else:
             self.advance_pc()
     def jlt(self):
         if self.fl == 4:
-            self.pc = self.register[self.ram_read(self.pc + 1)]
+            self.pc = self.register[self.ram_read(self.pc, 1)]
         else:
             self.advance_pc()
     def jge(self):
@@ -324,12 +330,12 @@ class CPU:
             self.advance_pc()
     def jle(self):
         if self.fl != 2:
-            self.pc = self.register[self.ram_read(self.pc + 1)]
+            self.pc = self.register[self.ram_read(self.pc, 1)]
         else:
             self.advance_pc()
 
     def ret(self):
-        SP = self.ram[self.register[6]]
+        SP = self.ram_read(self.register[6], 0)
         self.pc = SP
         self.register[6] += 1
 
@@ -377,13 +383,13 @@ class CPU:
     
     #get number of times to increment pc from instruction binary
     def advance_pc(self):
-        INSTRUCTIONS = self.ram_read(self.pc)
+        INSTRUCTIONS = self.ram_read(self.pc, 0)
         number_of_times_to_increment_pc = ((INSTRUCTIONS >> 6) & 0b11) +1
         self.pc += number_of_times_to_increment_pc
 
     def alu_helper(self, op):
-        operand_a = self.ram_read(self.pc + 1)
-        operand_b = self.ram_read(self.pc + 2) 
+        operand_a = self.ram_read(self.pc, 1)
+        operand_b = self.ram_read(self.pc, 2) 
         self.alu(op, operand_a, operand_b)   
         self.advance_pc()
 
@@ -395,12 +401,12 @@ class CPU:
             # read the memory address (MAR) that's stored in register PC (self.pc)
             # store the result in IR (Instruction Register)
             IR = self.pc
-            instruction_to_execute = self.ram[IR]
+            instruction_to_execute = self.ram_read(IR, 0)
 
             try:
                 self.branchtable[instruction_to_execute]()
             
             except KeyError:
-                print(f"KeyError at {self.register[self.ram[instruction_to_execute]]}")
+                print(f"KeyError at {self.register[self.ram_read(instruction_to_execute, 0)]}")
                 sys.exit(1)
 
