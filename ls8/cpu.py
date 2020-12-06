@@ -47,7 +47,9 @@ POP = 0x46 #01000110 Pop the value at the top of the stack into the given regist
 PRN = 0x47 #01000111 71 PRINT
 PRA = 0x48 #01001000 Print alpha character value stored in the given register.
 
-
+IM = 5 # interrupt mask
+IS = 6 #interrupt status to R6
+SP = 7 #stack pointer to R7
 class CPU:
     """Main CPU class."""
 
@@ -100,10 +102,10 @@ class CPU:
         }
         self.ram = [0] * 256 # 256 bytes of memory
         self.register = [0] * 8 # General Purpose Registers R0 - R6
-        self.register[7] = 0xF4 # R7 set to '0xF4' == '0b11110100' == '244'
+        self.register[SP] = 0xF4 # R7 set to '0xF4' == '0b11110100' == '244'
         self.pc = 0 # Program Counter
         self.fl = 0 #`FL` bits: `00000LGE`
-        self.sp = 7 #stack pointer to R7
+
         self.running = False
 
 
@@ -273,18 +275,18 @@ class CPU:
         given_register = self.ram_read(self.pc, 1)
         value_in_register = self.register[given_register]
         # Decrement the stack pointer
-        self.register[self.sp] -= 1
+        self.register[SP] -= 1
         # Write the value of the given register to memory at SP location
-        self.ram_write(self.register[self.sp], value_in_register)
+        self.ram_write(self.register[SP], value_in_register)
         self.advance_pc()
 
     def pop(self):
         given_register = self.ram_read(self.pc, 1)
         # write the value in memory at the top of stack to the given register
-        value_from_memory = self.ram_read(self.register[self.sp],0)
+        value_from_memory = self.ram_read(self.register[SP],0)
         self.register[given_register] = value_from_memory
         # increment the stack pointer
-        self.register[self.sp] += 1
+        self.register[SP] += 1
         self.advance_pc()
 
     def handle_int(self):
@@ -295,8 +297,8 @@ class CPU:
 
     def call(self):
         return_address = self.pc + 2
-        self.register[6] -= 1
-        self.ram_write(self.register[6], return_address)
+        self.register[IS] -= 1
+        self.ram_write(self.register[IS], return_address)
         self.pc = self.register[self.ram_read(self.pc, 1)]
 
     def jmp(self):
@@ -335,9 +337,9 @@ class CPU:
             self.advance_pc()
 
     def ret(self):
-        SP = self.ram_read(self.register[6], 0)
+        SP = self.ram_read(self.register[IS], 0)
         self.pc = SP
-        self.register[6] += 1
+        self.register[IS] += 1
 
     def mul(self):
         self.alu_helper("MUL")
