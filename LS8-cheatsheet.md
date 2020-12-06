@@ -35,10 +35,10 @@ spec is correct.
 - [x] JMP  01010100 00000rrr
 - [x] JEQ  01010101 00000rrr
 - [x] JNE  01010110 00000rrr
-- [ ] JGT  01010111 00000rrr
-- [ ] JLT  01011000 00000rrr
-- [ ] JLE  01011001 00000rrr
-- [ ] JGE  01011010 00000rrr
+- [x] JGT  01010111 00000rrr
+- [x] JLT  01011000 00000rrr
+- [x] JLE  01011001 00000rrr
+- [x] JGE  01011010 00000rrr
 ```
 
 ## Other

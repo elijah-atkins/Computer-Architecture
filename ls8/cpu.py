@@ -190,7 +190,7 @@ class CPU:
         from run() if you need help debugging.
         """
 
-        print(f"TRACE: %02X %02X  | %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X |" % (
+        print(f"TRACE: %02X %02X  | %02X %02X %02X %02X %02X |" % (
             self.pc,
             self.fl,
             #self.ie, <--what's this
@@ -199,12 +199,7 @@ class CPU:
             self.ram_read(self.pc + 2),
             self.ram_read(self.pc + 3),
             self.ram_read(self.pc + 4),
-            self.ram_read(self.pc + 5),
-            self.ram_read(self.pc + 6),
-            self.ram_read(self.pc + 7),
-            self.ram_read(self.pc + 8),
-            self.ram_read(self.pc + 9),
-            self.ram_read(self.pc + 10),
+
         ), end='')
 
         for i in range(8):
@@ -251,7 +246,8 @@ class CPU:
         register_a = self.ram_read(self.pc + 1)
         register_b = self.ram_read(self.pc + 2)
         # Print character
-        self.register[register_a] = self.register[register_b]
+
+        self.register[register_a] = self.ram[self.register[register_b]]
         # Update PC
         self.advance_pc()
 
@@ -261,7 +257,7 @@ class CPU:
         register_a = self.ram_read(self.pc + 1)
         register_b = self.ram_read(self.pc + 2)
         # Print character
-        self.register[register_b] = self.register[register_a]
+        self.register[register_b] = self.ram[self.register[register_a]]
 
         # Update PC
         self.advance_pc()
@@ -287,17 +283,14 @@ class CPU:
     def call(self):
         return_address = self.pc + 2
         self.register[6] -= 1
-
         self.ram[self.register[6]] = return_address
-
         self.pc = self.register[self.ram_read(self.pc + 1)]
 
     def jmp(self):
-
         self.pc = self.register[self.ram_read(self.pc + 1)]
 
     def jeq(self):
-        if self.fl == 1:
+        if self.fl == 1: #001
             self.pc = self.register[self.ram_read(self.pc + 1)]
         else:
             self.advance_pc()
