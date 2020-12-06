@@ -10,3 +10,4 @@ cpu = CPU()
 cpu.load()
 
 cpu.run()
+cpu.trace()

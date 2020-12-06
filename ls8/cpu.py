@@ -196,9 +196,9 @@ class CPU:
         from run() if you need help debugging.
         """
 
-        print(f"TRACE: %02X %08X  | %02X %02X %02X %02X %02X |" % (
+        print(f"TRACE: %02X %02X  | %02X %02X %02X %02X %02X |" % (
             self.pc,
-            self.fl,#returning flag in binary
+            self.fl,
             #self.ie, <--what's this?
             self.ram_read(self.pc, 0),
             self.ram_read(self.pc, 1),

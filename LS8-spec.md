@@ -223,7 +223,19 @@ Machine code:
 01010000 00000rrr
 50 0r
 ```
+### JMP
 
+`JMP register`
+
+Jump to the address stored in the given register.
+
+Set the `PC` to the address stored in the given register.
+
+Machine code:
+```
+01010100 00000rrr
+54 0r
+```
 ### CMP
 
 *This is an instruction handled by the ALU.*
