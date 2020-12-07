@@ -1,7 +1,7 @@
 """CPU functionality."""
 
 import sys
-from time import time
+from datetime import datetime, timedelta
 
 # Program Actions using hex for easy ref in trace
 # ALU ops
@@ -57,9 +57,10 @@ POP = 0x46  # 01000110 Pop
 PRN = 0x47  # 01000111 71 PRINT
 PRA = 0x48  # 01001000 Print alpha character
 
-IM = 5  # interrupt mask
-IS = 6  # interrupt status to R6
-SP = 7  # stack pointer to R7
+IM = 0x05  # interrupt mask
+IS = 0x06  # interrupt status to R6
+SP = 0x07  # stack pointer to R7
+IV = 0xF8  # interrupt vector(s) (ram address)
 
 
 class CPU:
@@ -119,7 +120,7 @@ class CPU:
         self.fl = 0  # `FL` bits: `00000LGE`
 
         self.running = False
-
+        self.can_interrupt = True
     # access the RAM inside the CPU object
     # MAR (Memory Address Register) - contains the address that is
         # being read / written to
@@ -320,6 +321,13 @@ class CPU:
         4. Interrupts are re-enabled
         '''
         pass
+        # self.trace()
+        # for r in range(6, -1, -1):
+        #     self.register.pop(r)
+        # (temp0, temp1) = (self.register[0], self.register[1])
+        # (self.fl, self.pc) = (self.reg[0], self.reg[1])
+        # (self.reg[0], self.reg[1]) = (temp0, temp1)
+        # self.can_interrupt = True
 
     def call(self):
         # return address is address of instruction directly after Call
