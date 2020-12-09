@@ -122,7 +122,8 @@ class CPU:
         self.fl = 0  # `FL` bits: `00000LGE`
 
         self.running = False
-        self.can_interrupt = True
+        self.can_interrupt = False
+
         self.number_of_times_to_increment_pc = 0
 
     # access the RAM inside the CPU object
@@ -153,9 +154,10 @@ class CPU:
             with open(sys.argv[1]) as ls8:
                 program = ls8.read().splitlines()
                 ls8.close()
-            #this will ignore lines that start with anything other than 0 or 1
-            #and only load the first 8 characters of each line
-            program = [line[:8] for line in program if line and line[0] in ['0', '1']]
+            # this will ignore lines that start with anything other than 0 or 1
+            # and only load the first 8 characters of each line
+            program = [line[:8]
+                       for line in program if line and line[0] in ['0', '1']]
 
             for instruction in program:
                 self.ram[address] = int(instruction, 2)
@@ -176,6 +178,7 @@ class CPU:
             self.register[reg_a] *= self.register[reg_b]
         elif op == "DIV":
             # result is float not int in div when using '/'
+            # using floor division operator for int output
             self.register[reg_a] //= self.register[reg_b]
         elif op == "MOD":
             self.register[reg_a] %= self.register[reg_b]
@@ -220,11 +223,12 @@ class CPU:
             self.pc,
             self.fl,
             # self.ie, <--what's this?
-            self.ram_read(self.pc, 0),
+
             self.ram_read(self.pc, 1),
             self.ram_read(self.pc, 2),
             self.ram_read(self.pc, 3),
             self.ram_read(self.pc, 4),
+            self.ram_read(self.pc, 5),
 
         ), end='')
 
@@ -242,90 +246,94 @@ class CPU:
         # Assign value to Reg Key
         self.register[given_register] = integer
 
-
-    def prn(self, a, b):
+    def prn(self, a):
         # get the address we want to print
         given_register = a
         # Print Reg at address we want to print
         print(self.register[given_register])
 
-
-    def pra(self, a, *args):
+    def pra(self, a):
         # get the character value of the item stored in given register
+        print("a")
         character_value = self.register[a]
         # print the letter without a new line
         print(chr(character_value), end='')
 
-
-    def hlt(self, *args):
+    def hlt(self):
         # Exit Loop
         self.running = False
-
 
     def ld(self, a, b):
         # Loads register_a with the value at the
         # memory address stored in register_b.
         self.register[a] = self.ram_read(self.register[b], 0)
 
-
     def st(self, a, b):
         # Loads register_b with the value at the
         # memory address stored in register_a.
         self.register[b] = self.ram_read(self.register[a], 0)
 
+    def push(self, a):
 
-    def push(self, a, *args):
-        value_in_register = self.register[a]
         # Decrement the stack pointer
         self.register[SP] -= 1
+        self.register[SP] &= 0xFF
+        value_in_register = self.register[a]
         # Write the value of the given register to memory at SP location
         self.ram_write(self.register[SP], value_in_register)
 
 
-    def pop(self, a, *args):
+
+    def pop(self, a):
+        print(a, "pop")
         # write the value in memory at the top of stack to the given register
         value_from_memory = self.ram_read(self.register[SP], 0)
         self.register[a] = value_from_memory
+
         # increment the stack pointer
         self.register[SP] += 1
+        self.register[SP] &= 0xFF
 
-
-    def handle_int(self, a, *args):
+    def handle_int(self, a):
         # Issue the interrupt number stored in the given register.
         self.register[IS] = a
 
-    def iret(self, *args):
+    def iret(self):
         '''
         1. Registers R6-R0 are popped off the stack in that order.
         2. The `FL` register is popped off the stack.
         3. The return address is popped off the stack and stored in `PC`.
         4. Interrupts are re-enabled
         '''
-        pass
-        # self.trace()
-        # for r in range(6, -1, -1):
-        #     self.register.pop(r)
-        # (temp0, temp1) = (self.register[0], self.register[1])
-        # (self.fl, self.pc) = (self.reg[0], self.reg[1])
-        # (self.reg[0], self.reg[1]) = (temp0, temp1)
-        # self.can_interrupt = True
 
-    def call(self,a, *args):
+        for r in reversed(range(6)):
+
+            self.pop(r)
+        self.pop(FL)
+        (temp0, temp1) = (self.register[0], self.register[1])
+        (self.pc, self.fl) = (self.register[0], self.register[1])
+
+        (self.register[0], self.register[1]) = (temp0, temp1)
+        self.can_interrupt = True
+        self.number_of_times_to_increment_pc = 0
+
+    def call(self, a):
         # return address is address of instruction directly after Call
         return_address = self.pc + 2
         # add return address to ram at next lowest IS address
         self.register[IS] -= 1
+        self.register[IS] &= 0xFF
         self.ram_write(self.register[IS], return_address)
         # The PC is set to the address stored in the given register.
         self.pc = self.register[a]
         self.number_of_times_to_increment_pc = 0
 
-    def jmp(self, a, *args):
+    def jmp(self, a):
         # Jump to the address stored in the given register.
         self.pc = self.register[a]
         self.number_of_times_to_increment_pc = 0
 
-    def jeq(self, a, *args):
+    def jeq(self, a):
         '''
         If `equal` flag is set (true), jump to the address stored in the given register.
         '''
@@ -333,7 +341,7 @@ class CPU:
             self.pc = self.register[a]
             self.number_of_times_to_increment_pc = 0
 
-    def jne(self, a, *args):
+    def jne(self, a):
         ''' 
         If `E` flag is clear (false, 0), jump to the address stored in the given
 register.
@@ -342,8 +350,7 @@ register.
             self.pc = self.register[a]
             self.number_of_times_to_increment_pc = 0
 
-
-    def jgt(self, a, *args):
+    def jgt(self, a):
         '''
         If `greater-than` flag is set (true), jump to the address stored in the given
 register.
@@ -352,7 +359,7 @@ register.
             self.pc = self.register[a]
             self.number_of_times_to_increment_pc = 0
 
-    def jlt(self, a, *args):
+    def jlt(self, a):
         '''
         If `less-than` flag is set (true), jump to the address stored in the given
 register.
@@ -361,7 +368,7 @@ register.
             self.pc = self.register[a]
             self.number_of_times_to_increment_pc = 0
 
-    def jge(self, a, *args):
+    def jge(self, a):
         '''
         If `greater-than` flag or `equal` flag is set (true), jump to the address stored
 in the given register.
@@ -369,100 +376,126 @@ in the given register.
         if self.fl != 4:
             self.pc = self.register[a]
 
-
-    def jle(self, a, *args):
+    def jle(self, a):
 
         # If `less-than` flag or `equal` flag is set (true), jump to the address stored in the given register.
 
         if self.fl != 2:
             self.pc = self.register[a]
 
-
-    def ret(self, *args):
+    def ret(self):
         # Pop the value from the top of the stack and store it in the `PC`
         SP = self.ram_read(self.register[IS], 0)
         self.ram_write(self.register[IS], 0)
         self.pc = SP
         self.register[IS] += 1
+        self.register[IS] &= 0xFF
         self.number_of_times_to_increment_pc = 0
 
     def mul(self, a, b):
         self.alu("MUL", a, b)
 
-
     def div(self, a, b):
         self.alu("DIV", a, b)
-
 
     def sub(self, a, b):
         self.alu("SUB", a, b)
 
-
     def add(self, a, b):
         self.alu("ADD", a, b)
-
 
     def mod(self, a, b):
         self.alu("MOD", a, b)
 
-
-    def inc(self, a, b):
+    def inc(self, a):
+        b = 0
         self.alu("INC", a, b)
 
-
-    def dec(self, a, b):
+    def dec(self, a):
+        b = 0
         self.alu("DEC", a, b)
 
-
-    def handle_not(self,a,b):
+    def handle_not(self, a, b):
         self.alu("NOT", a, b)
-
 
     def handle_or(self, a, b):
         self.alu("OR", a, b)
 
-
     def handle_xor(self, a, b):
         self.alu("XOR", a, b)
-
 
     def handle_and(self, a, b):
         self.alu("AND", a, b)
 
-
     def shl(self, a, b):
         self.alu("SHL", a, b)
-
 
     def shr(self, a, b):
         self.alu("SHR", a, b)
 
-
     def handle_cmp(self, a, b):
         self.alu("CMP", a, b)
-
-
-
-
-
 
     def run(self):
         """Run the CPU."""
         self.running = True
+        last_runloop = datetime.now()
+        interupt_interval = timedelta(seconds=0)
+
         while self.running:
             # read the memory address (MAR) that's stored in register PC (self.pc)
             # store the result in IR (Instruction Register)
+            now = datetime.now()
+            interupt_interval  += (now - last_runloop)
+            last_runloop = now
+            if interupt_interval.seconds >= 1:
+                self.register[IS] |= 0x01
+                self.register[IS] &= 0xFF
+                interupt_interval -= timedelta(seconds=1)
+                self.can_interrupt = True
+
+            if self.can_interrupt:
+                self.handle_interrupts()
+
+
             IR = self.pc
             instruction_to_execute = self.ram_read(IR, 0)
-            self.number_of_times_to_increment_pc = ((instruction_to_execute >> 6) & 0b11) + 1
+            self.number_of_times_to_increment_pc = (
+                (instruction_to_execute >> 6) & 0b11) + 1
             operand_a = self.ram_read(IR, 1)
             operand_b = self.ram_read(IR, 2)
 
             try:
-                self.branchtable[instruction_to_execute](operand_a, operand_b)
+                if self.number_of_times_to_increment_pc == 2:
+                    self.branchtable[instruction_to_execute](operand_a)
+                elif self.number_of_times_to_increment_pc == 3:
+                    self.branchtable[instruction_to_execute](operand_a, operand_b)
+                else:
+                    self.branchtable[instruction_to_execute]()
+
                 self.pc += self.number_of_times_to_increment_pc
 
             except KeyError:
                 print(
                     f"KeyError at {self.register[self.ram_read(instruction_to_execute, 0)]}")
                 sys.exit(1)
+
+    def handle_interrupts(self):
+        self.register[IM] &= self.register[IS]
+        self.register[IM] &= 0xFF
+        masked_interrupts = self.register[IM]
+        for i in range(8):
+            mask = (1 << i)
+            if masked_interrupts & mask:
+                masked_interrupts &= ~mask #clear mask flag
+                self.register[IS] &= ~mask #clear register IS flag
+                self.can_interrupt = False
+                (temp0, temp1) = (self.register[0], self.register[1])
+                (self.register[0], self.register[1]) = (self.pc, self.fl)
+
+                (self.register[0], self.register[1]) = (temp0, temp1)
+                for r in range(7):
+                    self.push(r)
+                self.pc = self.ram[IV + i]
+                return
+
