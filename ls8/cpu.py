@@ -253,25 +253,24 @@ class CPU:
         print(self.register[given_register])
 
     def pra(self, a):
+
         # get the character value of the item stored in given register
-        print("a")
         character_value = self.register[a]
+        letter = chr(character_value)
         # print the letter without a new line
-        print(chr(character_value), end='')
+        print(letter)
 
     def hlt(self):
         # Exit Loop
         self.running = False
 
     def ld(self, a, b):
-        # Loads register_a with the value at the
-        # memory address stored in register_b.
+        #Loads registerA with the value at the memory address stored in registerB.
         self.register[a] = self.ram_read(self.register[b], 0)
 
     def st(self, a, b):
-        # Loads register_b with the value at the
-        # memory address stored in register_a.
-        self.register[b] = self.ram_read(self.register[a], 0)
+        #Store value in registerB in the address stored in registerA.
+        self.ram_write(self.register[a], self.register[b])
 
     def push(self, a):
 
@@ -285,7 +284,7 @@ class CPU:
 
 
     def pop(self, a):
-        print(a, "pop")
+
         # write the value in memory at the top of stack to the given register
         value_from_memory = self.ram_read(self.register[SP], 0)
         self.register[a] = value_from_memory
@@ -293,6 +292,16 @@ class CPU:
         # increment the stack pointer
         self.register[SP] += 1
         self.register[SP] &= 0xFF
+
+    def ipop(self):
+
+        # write the value in memory at the top of stack to the given register
+        value_from_memory = self.ram_read(self.register[SP], 0)
+        # increment the stack pointer
+        self.register[SP] += 1
+        self.register[SP] &= 0xFF
+
+        return value_from_memory
 
     def handle_int(self, a):
         # Issue the interrupt number stored in the given register.
@@ -306,14 +315,12 @@ class CPU:
         4. Interrupts are re-enabled
         '''
 
-        for r in reversed(range(6)):
-
+        for r in reversed(range(7)):
             self.pop(r)
-        self.pop(FL)
-        (temp0, temp1) = (self.register[0], self.register[1])
-        (self.pc, self.fl) = (self.register[0], self.register[1])
 
-        (self.register[0], self.register[1]) = (temp0, temp1)
+        self.fl = self.ipop()
+        self.pc = self.ipop()
+
         self.can_interrupt = True
         self.number_of_times_to_increment_pc = 0
 
@@ -481,21 +488,38 @@ in the given register.
                 sys.exit(1)
 
     def handle_interrupts(self):
-        self.register[IM] &= self.register[IS]
-        self.register[IM] &= 0xFF
-        masked_interrupts = self.register[IM]
+        masked_interrupts = self.register[IM] & self.register[IS]
         for i in range(8):
             mask = (1 << i)
             if masked_interrupts & mask:
+                '''
+                If a bit is set:
+
+                1. Disable further interrupts.
+                2. Clear the bit in the IS register.
+                3. The `PC` register is pushed on the stack.
+                4. The `FL` register is pushed on the stack.
+                5. Registers R0-R6 are pushed on the stack in that order.
+                6. The address (_vector_ in interrupt terminology) of the appropriate
+                handler is looked up from the interrupt vector table.
+                7. Set the PC is set to the handler address.
+                '''
+
+
                 masked_interrupts &= ~mask #clear mask flag
                 self.register[IS] &= ~mask #clear register IS flag
                 self.can_interrupt = False
+
                 (temp0, temp1) = (self.register[0], self.register[1])
                 (self.register[0], self.register[1]) = (self.pc, self.fl)
-
+                self.push(0)
+                self.push(1)
                 (self.register[0], self.register[1]) = (temp0, temp1)
+
                 for r in range(7):
                     self.push(r)
+
                 self.pc = self.ram[IV + i]
-                return
+
+
 
