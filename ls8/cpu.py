@@ -253,12 +253,15 @@ class CPU:
         print(self.register[given_register])
 
     def pra(self, a):
-
         # get the character value of the item stored in given register
-        character_value = self.register[a]
-        letter = chr(character_value)
+
         # print the letter without a new line
-        print(letter)
+        item = self.register[a]
+        if isinstance(item, int):
+            print(item, chr(item))
+        else:
+            print(item, end='')
+
 
     def hlt(self):
         # Exit Loop
@@ -293,7 +296,7 @@ class CPU:
         self.register[SP] += 1
         self.register[SP] &= 0xFF
 
-    def ipop(self):
+    def popReg(self):
 
         # write the value in memory at the top of stack to the given register
         value_from_memory = self.ram_read(self.register[SP], 0)
@@ -318,8 +321,8 @@ class CPU:
         for r in reversed(range(7)):
             self.pop(r)
 
-        self.fl = self.ipop()
-        self.pc = self.ipop()
+        self.fl = self.popReg()
+        self.pc = self.popReg()
 
         self.can_interrupt = True
         self.number_of_times_to_increment_pc = 0
@@ -403,7 +406,11 @@ in the given register.
         self.alu("MUL", a, b)
 
     def div(self, a, b):
-        self.alu("DIV", a, b)
+        if b != 0:
+            self.alu("DIV", a, b)
+        else:
+            print("Error, cannot divide by 0")
+            self.hlt()
 
     def sub(self, a, b):
         self.alu("SUB", a, b)
@@ -412,7 +419,10 @@ in the given register.
         self.alu("ADD", a, b)
 
     def mod(self, a, b):
-        self.alu("MOD", a, b)
+        if b != 0:
+            self.alu("MOD", a, b)
+        else:
+            print("Error, cannot perform mod, cannot divide by 0")
 
     def inc(self, a):
         b = 0
