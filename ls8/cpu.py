@@ -131,7 +131,7 @@ class CPU:
         # being read / written to
 
     def ram_read(self, MAR, shift):
-        # accepts the address with added shift to read and return the value stored there
+    # accepts the address with added shift to read and return the value stored there
         return self.ram[MAR + shift]
     # access the RAM inside the CPU object
     # MDR (Memory Data Register) - contains the data that was read or
@@ -257,18 +257,18 @@ class CPU:
         # print the letter
         letter = self.register[a]
 
-        print(chr(letter), end="")
+        print(chr(letter))
 
     def hlt(self):
         # Exit Loop
         self.running = False
 
     def ld(self, a, b):
-        #Loads registerA with the value at the memory address stored in registerB.
+        # Loads registerA with the value at the memory address stored in registerB.
         self.register[a] = self.ram_read(self.register[b], 0)
 
     def st(self, a, b):
-        #Store value in registerB in the address stored in registerA.
+        # Store value in registerB in the address stored in registerA.
         self.ram_write(self.register[a], self.register[b])
 
     def push(self, a):
@@ -280,7 +280,13 @@ class CPU:
         # Write the value of the given register to memory at SP location
         self.ram_write(self.register[SP], value_in_register)
 
+    def pushReg(self, a):
 
+        # Decrement the stack pointer
+        self.register[SP] -= 1
+        self.register[SP] &= 0xFF
+        # Write the value of the given register to memory at SP location
+        self.ram_write(self.register[SP], a)
 
     def pop(self, a):
 
@@ -292,7 +298,7 @@ class CPU:
         self.register[SP] += 1
         self.register[SP] &= 0xFF
 
-    #popReg pop value increase pointer value and return value
+    # popReg pop value increase pointer value and return value
     def popReg(self):
 
         # write the value in memory at the top of stack to the given register
@@ -302,8 +308,6 @@ class CPU:
         self.register[SP] &= 0xFF
 
         return value_from_memory
-
-
 
     def iret(self):
         '''
@@ -407,7 +411,6 @@ in the given register.
         else:
             self.alu("DIV", a, b)
 
-
     def sub(self, a, b):
         self.alu("SUB", a, b)
 
@@ -420,6 +423,7 @@ in the given register.
             self.hlt()
         else:
             self.alu("MOD", a, b)
+
     def inc(self, a):
         b = 0
         self.alu("INC", a, b)
@@ -459,7 +463,7 @@ in the given register.
             # read the memory address (MAR) that's stored in register PC (self.pc)
             # store the result in IR (Instruction Register)
             now = datetime.now()
-            interupt_interval  += (now - last_runloop)
+            interupt_interval += (now - last_runloop)
             last_runloop = now
             if interupt_interval.seconds >= 1:
                 self.register[IS] |= 0x01
@@ -469,7 +473,6 @@ in the given register.
 
             if self.can_interrupt:
                 self.handle_interrupts()
-
 
             IR = self.pc
             instruction_to_execute = self.ram_read(IR, 0)
@@ -482,7 +485,8 @@ in the given register.
                 if self.number_of_times_to_increment_pc == 2:
                     self.branchtable[instruction_to_execute](operand_a)
                 elif self.number_of_times_to_increment_pc == 3:
-                    self.branchtable[instruction_to_execute](operand_a, operand_b)
+                    self.branchtable[instruction_to_execute](
+                        operand_a, operand_b)
                 else:
                     self.branchtable[instruction_to_execute]()
 
@@ -511,22 +515,15 @@ in the given register.
                 handler is looked up from the interrupt vector table.
                 7. Set the PC is set to the handler address.
                 '''
-
-
-                masked_interrupts &= ~mask #clear mask flag
-                self.register[IS] &= ~mask #clear register IS flag
+                masked_interrupts &= ~mask  # clear mask flag
+                self.register[IS] &= ~mask  # clear register IS flag
                 self.can_interrupt = False
 
-                (temp0, temp1) = (self.register[0], self.register[1])
-                (self.register[0], self.register[1]) = (self.pc, self.fl)
-                self.push(0)
-                self.push(1)
-                (self.register[0], self.register[1]) = (temp0, temp1)
+                self.pushReg(self.pc)  # push self.pc
+                self.pushReg(self.fl)  # push self.fl
 
+                # Registers R0-R6 are pushed on the stack in that order.
                 for r in range(7):
                     self.push(r)
 
                 self.pc = self.ram[IV + i]
-
-
-

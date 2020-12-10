@@ -1,16 +1,15 @@
-
 10000010 # LDI R0,1 (LINE COUNT)
 00000000
 00000001
 01000101 # PUSH R0 (stack[0] = lineCount)
 00000000
-10000010 # LDI R1,1 (number of hashes required for line)
+10000010 # LDI R1,1 (number of stars required for line)
 00000001
 00000001
-10000010 # LDI R0,0 (current hash count)
+10000010 # LDI R0,0 (current star count)
 00000000
 00000000
-10000010 # LDI R2,hash (symbol to print)
+10000010 # LDI R2,star (symbol to print)
 00000010
 00101010
 10000010 # LDI R4,17 (load jump location)
@@ -23,7 +22,7 @@
 10100111 # CMP R0,R1
 00000000
 00000001
-01011000 # JLT R4 (add another hash) (JUMP TO line 9 IF NOT DONE WITH LINE)
+01011000 # JLT R4 (add another star) (JUMP TO line 9 IF NOT DONE WITH LINE)
 00000100
 10000010 # LDI R2,carriage return (13) (NEWLINE)
 00000010
@@ -35,19 +34,16 @@
 00001010
 01001000 # PRA R2
 00000010
-10000010 # LDI R3,2
-00000011
-00000010
-10100010 # MUL R1,R3
+10100000 # ADD R1,R3
 00000001
-00000011
+00000001
 01000110 # POP R0
 00000000
 01100101 # INC R0
 00000000
-10000010 # LDI R3,7
+10000010 # LDI R3,7 number of lines to print
 00000011
-00001000
+00001000 
 10100111 # CMP R0,R3
 00000000
 00000011
@@ -60,8 +56,8 @@
 00000100
 00000001 # HLT
 
-# R0 - current hash count for line
-# R1 - total required hashes for line
+# R0 - current star count for line
+# R1 - total required stars for line
 # R2 - printable
 # R3 - math operand (comparator, multiplier)
 # R4 - jump location
