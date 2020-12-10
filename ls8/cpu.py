@@ -254,13 +254,13 @@ class CPU:
 
     def pra(self, a):
         # get the character value of the item stored in given register
+        # print the letter
+        letter = self.register[a]
+        print(chr(letter))
 
-        # print the letter without a new line
-        item = self.register[a]
-        if isinstance(item, int):
-            print(item, chr(item))
-        else:
-            print(item, end='')
+
+
+
 
 
     def hlt(self):
@@ -296,6 +296,7 @@ class CPU:
         self.register[SP] += 1
         self.register[SP] &= 0xFF
 
+    #popReg pop value increase pointer value and return value
     def popReg(self):
 
         # write the value in memory at the top of stack to the given register
@@ -498,6 +499,7 @@ in the given register.
                 sys.exit(1)
 
     def handle_interrupts(self):
+
         masked_interrupts = self.register[IM] & self.register[IS]
         for i in range(8):
             mask = (1 << i)
@@ -515,7 +517,7 @@ in the given register.
                 7. Set the PC is set to the handler address.
                 '''
 
-
+ 
                 masked_interrupts &= ~mask #clear mask flag
                 self.register[IS] &= ~mask #clear register IS flag
                 self.can_interrupt = False
