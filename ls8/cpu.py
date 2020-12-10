@@ -91,7 +91,7 @@ class CPU:
             CALL: self.call,
             RET: self.ret,
 
-            INT: self.handle_int,
+            INT: self.handle_interrupts,
             IRET: self.iret,
 
             JMP: self.jmp,
@@ -256,12 +256,8 @@ class CPU:
         # get the character value of the item stored in given register
         # print the letter
         letter = self.register[a]
-        print(chr(letter))
 
-
-
-
-
+        print(chr(letter), end="")
 
     def hlt(self):
         # Exit Loop
@@ -307,9 +303,7 @@ class CPU:
 
         return value_from_memory
 
-    def handle_int(self, a):
-        # Issue the interrupt number stored in the given register.
-        self.register[IS] = a
+
 
     def iret(self):
         '''
@@ -332,9 +326,9 @@ class CPU:
         # return address is address of instruction directly after Call
         return_address = self.pc + 2
         # add return address to ram at next lowest IS address
-        self.register[IS] -= 1
-        self.register[IS] &= 0xFF
-        self.ram_write(self.register[IS], return_address)
+        self.register[SP] -= 1
+        self.register[SP] &= 0xFF
+        self.ram_write(self.register[SP], return_address)
         # The PC is set to the address stored in the given register.
         self.pc = self.register[a]
         self.number_of_times_to_increment_pc = 0
@@ -396,22 +390,23 @@ in the given register.
 
     def ret(self):
         # Pop the value from the top of the stack and store it in the `PC`
-        SP = self.ram_read(self.register[IS], 0)
-        self.ram_write(self.register[IS], 0)
-        self.pc = SP
-        self.register[IS] += 1
-        self.register[IS] &= 0xFF
+        stack_value = self.ram_read(self.register[SP], 0)
+        self.ram_write(self.register[SP], 0)
+        self.pc = stack_value
+        self.register[SP] += 1
+        self.register[SP] &= 0xFF
         self.number_of_times_to_increment_pc = 0
 
     def mul(self, a, b):
         self.alu("MUL", a, b)
 
     def div(self, a, b):
-        if b != 0:
-            self.alu("DIV", a, b)
-        else:
-            print("Error, cannot divide by 0")
+        if self.register[b] == 0:
+            print("ZeroDivisionError: integer division by zero")
             self.hlt()
+        else:
+            self.alu("DIV", a, b)
+
 
     def sub(self, a, b):
         self.alu("SUB", a, b)
@@ -420,11 +415,11 @@ in the given register.
         self.alu("ADD", a, b)
 
     def mod(self, a, b):
-        if b != 0:
-            self.alu("MOD", a, b)
+        if self.register[b] == 0:
+            print("ZeroDivisionError: modulo by zero")
+            self.hlt()
         else:
-            print("Error, cannot perform mod, cannot divide by 0")
-
+            self.alu("MOD", a, b)
     def inc(self, a):
         b = 0
         self.alu("INC", a, b)
@@ -517,7 +512,7 @@ in the given register.
                 7. Set the PC is set to the handler address.
                 '''
 
- 
+
                 masked_interrupts &= ~mask #clear mask flag
                 self.register[IS] &= ~mask #clear register IS flag
                 self.can_interrupt = False
