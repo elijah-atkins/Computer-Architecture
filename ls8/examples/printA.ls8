@@ -1,8 +1,8 @@
-# Print the letter w followed by a new line
+# Print the letter A followed by a new line
 
-10000010 # LDI R0,w
+10000010 # LDI R0,65(A)
 00000000
-01110111
+01000001
 10000010 # LDI R1,break
 00000001
 00001010 # 0x0a

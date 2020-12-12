@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 # Program Actions using hex for easy ref in trace
 # ALU ops
+ADDI = 0xA5 # 10100101
 ADD = 0xA0  # 10100000 160 ADD
 SUB = 0xA1  # 10100001 161 Subtract
 MUL = 0xA2  # 10100010 162 MULTIPLY
@@ -73,6 +74,7 @@ class CPU:
 
         self.branchtable = {
             # ALU ops
+            ADDI: self.addi,
             ADD: self.add,
             SUB: self.sub,
             MUL: self.mul,
@@ -126,17 +128,14 @@ class CPU:
 
         self.number_of_times_to_increment_pc = 0
 
-    # access the RAM inside the CPU object
-    # MAR (Memory Address Register) - contains the address that is
-        # being read / written to
+
 
     def ram_read(self, MAR, shift):
-    # accepts the address with added shift to read and return the value stored there
+        # accepts the address with shift int to read and return the value stored there
         return self.ram[MAR + shift]
-    # access the RAM inside the CPU object
-    # MDR (Memory Data Register) - contains the data that was read or
-        # the data to write
 
+    # MAR (Memory Address Register) 
+    # MDR (Memory Data Register)
     def ram_write(self, MAR, MDR):
         # accepts a vale to write and the address to write it to
         self.ram[MAR] = MDR
@@ -150,15 +149,16 @@ class CPU:
 
         # load code in ls8 file into ram
         try:
-            address = 0
+            # Load filtered program into an array by line
             with open(sys.argv[1]) as ls8:
                 program = ls8.read().splitlines()
                 ls8.close()
-            # this will ignore lines that start with anything other than 0 or 1
-            # and only load the first 8 characters of each line
-            program = [line[:8]
-                       for line in program if line and line[0] in ['0', '1']]
-
+            #lint program array so only binary remains
+            program = [line[:8] #only load the first 8 characters of each line
+                       for line in program if line and line[0] in ['0', '1']] #ignore lines that start with anything other than 0 or 1
+            # set initial address
+            address = 0
+            # Load program array into ram
             for instruction in program:
                 self.ram[address] = int(instruction, 2)
                 address += 1
@@ -198,6 +198,7 @@ class CPU:
             self.register[reg_a] <<= self.register[reg_b]
         elif op == "SHR":
             self.register[reg_a] >>= self.register[reg_b]
+
 # Compare the values in two registers.
 
         elif op == "CMP":  # `FL` bits: `00000LGE`
@@ -254,34 +255,33 @@ class CPU:
 
     def pra(self, a):
         # get the character value of the item stored in given register
-        # print the letter
         letter = self.register[a]
-
-        print(chr(letter))
+        # print the letter
+        print(chr(letter), end="")
 
     def hlt(self):
-        # Exit Loop
+        # Exit run Loop
         self.running = False
 
     def ld(self, a, b):
-        # Loads registerA with the value at the memory address stored in registerB.
+        # Loads register in a with the value at the memory address in b.
         self.register[a] = self.ram_read(self.register[b], 0)
 
     def st(self, a, b):
-        # Store value in registerB in the address stored in registerA.
+        # Store value in b in the address stored in a.
         self.ram_write(self.register[a], self.register[b])
 
     def push(self, a):
-
         # Decrement the stack pointer
         self.register[SP] -= 1
         self.register[SP] &= 0xFF
+        #get value of given register
         value_in_register = self.register[a]
         # Write the value of the given register to memory at SP location
         self.ram_write(self.register[SP], value_in_register)
 
+    #only used for storing value for self.fl and self.pc into the stack without storing them in register first
     def pushReg(self, a):
-
         # Decrement the stack pointer
         self.register[SP] -= 1
         self.register[SP] &= 0xFF
@@ -289,59 +289,50 @@ class CPU:
         self.ram_write(self.register[SP], a)
 
     def pop(self, a):
-
         # write the value in memory at the top of stack to the given register
         value_from_memory = self.ram_read(self.register[SP], 0)
+        #load value from memory into register at a 
         self.register[a] = value_from_memory
-
         # increment the stack pointer
         self.register[SP] += 1
         self.register[SP] &= 0xFF
 
     # popReg pop value increase pointer value and return value
     def popReg(self):
-
         # write the value in memory at the top of stack to the given register
         value_from_memory = self.ram_read(self.register[SP], 0)
         # increment the stack pointer
         self.register[SP] += 1
         self.register[SP] &= 0xFF
-
+        #return value, only used for recovering value for self.fl and self.pc
         return value_from_memory
 
     def iret(self):
-        '''
-        1. Registers R6-R0 are popped off the stack in that order.
-        2. The `FL` register is popped off the stack.
-        3. The return address is popped off the stack and stored in `PC`.
-        4. Interrupts are re-enabled
-        '''
-
-        for r in reversed(range(7)):
+        for r in reversed(range(7)): #Registers R6-R0 are popped off the stack in that order.
             self.pop(r)
 
-        self.fl = self.popReg()
-        self.pc = self.popReg()
+        self.fl = self.popReg() #The `FL` register is popped off the stack.
+        self.pc = self.popReg() #The return address is popped off the stack and stored in `PC`.
 
-        self.can_interrupt = True
-        self.number_of_times_to_increment_pc = 0
+        self.can_interrupt = True #Interrupts are re-enabled
+        self.number_of_times_to_increment_pc = 0 #set this to 0 if self.pc is changed
 
     def call(self, a):
-        # return address is address of instruction directly after Call
-        return_address = self.pc + 2
-        # add return address to ram at next lowest IS address
+        
+        return_address = self.pc + 2 # return address is address of instruction directly after Call
+        # add return address to ram at next lowest SP address
         self.register[SP] -= 1
         self.register[SP] &= 0xFF
         self.ram_write(self.register[SP], return_address)
         # The PC is set to the address stored in the given register.
         self.pc = self.register[a]
-        self.number_of_times_to_increment_pc = 0
+        self.number_of_times_to_increment_pc = 0 #pc changed
 
     def jmp(self, a):
         # Jump to the address stored in the given register.
         self.pc = self.register[a]
-        self.number_of_times_to_increment_pc = 0
-
+        self.number_of_times_to_increment_pc = 0 #pc changed
+    
     def jeq(self, a):
         '''
         If `equal` flag is set (true), jump to the address stored in the given register.
@@ -355,7 +346,7 @@ class CPU:
         If `E` flag is clear (false, 0), jump to the address stored in the given
 register.
         '''
-        if self.fl != 1:
+        if self.fl != 1:  # 001 Equal 
             self.pc = self.register[a]
             self.number_of_times_to_increment_pc = 0
 
@@ -364,7 +355,7 @@ register.
         If `greater-than` flag is set (true), jump to the address stored in the given
 register.
         '''
-        if self.fl == 2:
+        if self.fl == 2: # 010 Greater than
             self.pc = self.register[a]
             self.number_of_times_to_increment_pc = 0
 
@@ -373,24 +364,19 @@ register.
         If `less-than` flag is set (true), jump to the address stored in the given
 register.
         '''
-        if self.fl == 4:
+        if self.fl == 4: #100 Less than
             self.pc = self.register[a]
             self.number_of_times_to_increment_pc = 0
 
     def jge(self, a):
-        '''
-        If `greater-than` flag or `equal` flag is set (true), jump to the address stored
-in the given register.
-        '''
-        if self.fl != 4:
+        if self.fl != 4: #100 Less than flag not set, Greater than or Equal
             self.pc = self.register[a]
-
+            self.number_of_times_to_increment_pc = 0
     def jle(self, a):
-
         # If `less-than` flag or `equal` flag is set (true), jump to the address stored in the given register.
-
-        if self.fl != 2:
+        if self.fl != 2: #010 Greater than
             self.pc = self.register[a]
+            self.number_of_times_to_increment_pc = 0
 
     def ret(self):
         # Pop the value from the top of the stack and store it in the `PC`
@@ -416,6 +402,9 @@ in the given register.
 
     def add(self, a, b):
         self.alu("ADD", a, b)
+    
+    def addi(self, a, b):
+        self.register[a] += b
 
     def mod(self, a, b):
         if self.register[b] == 0:
@@ -498,32 +487,25 @@ in the given register.
                 sys.exit(1)
 
     def handle_interrupts(self):
-
+        '''
+        1. The IM register is bitwise AND-ed with the IS register and the
+        results stored as `maskedInterrupts`.
+        2. Each bit of `maskedInterrupts` is checked, starting from 0 and going
+        up to the 7th bit, one for each interrupt.
+        3. If a bit is found to be set, follow the next sequence of steps. Stop
+        further checking of `maskedInterrupts`.
+        '''
         masked_interrupts = self.register[IM] & self.register[IS]
         for i in range(8):
             mask = (1 << i)
             if masked_interrupts & mask:
-                '''
-                If a bit is set:
+                self.can_interrupt = False #Disable further interrupts.
+                self.register[IS] &= ~mask  # Clear the bit in the IS register.
+                self.pushReg(self.pc)  #The `PC` register is pushed on the stack.
+                self.pushReg(self.fl)  #The `FL` register is pushed on the stack.
 
-                1. Disable further interrupts.
-                2. Clear the bit in the IS register.
-                3. The `PC` register is pushed on the stack.
-                4. The `FL` register is pushed on the stack.
-                5. Registers R0-R6 are pushed on the stack in that order.
-                6. The address (_vector_ in interrupt terminology) of the appropriate
-                handler is looked up from the interrupt vector table.
-                7. Set the PC is set to the handler address.
-                '''
-                masked_interrupts &= ~mask  # clear mask flag
-                self.register[IS] &= ~mask  # clear register IS flag
-                self.can_interrupt = False
-
-                self.pushReg(self.pc)  # push self.pc
-                self.pushReg(self.fl)  # push self.fl
-
-                # Registers R0-R6 are pushed on the stack in that order.
-                for r in range(7):
+                for r in range(7): # Registers R0-R6 are pushed on the stack in that order.
                     self.push(r)
-
-                self.pc = self.ram[IV + i]
+                #Set the PC is set to the handler address.
+                self.pc = self.ram[IV + i] 
+                #The address or (_vector_) of the appropriate handler is looked up from the interrupt vector table.
